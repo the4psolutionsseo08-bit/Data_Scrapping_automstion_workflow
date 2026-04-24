@@ -3,20 +3,28 @@ import requests
 import pandas as pd
 import gspread
 from dotenv import load_dotenv
+import streamlit as st
 
 # Load environment variables
 load_dotenv()
 
-APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
-GOOGLE_SHEET_URL = os.getenv("GOOGLE_SHEET_URL")
+def get_secret(key):
+    try:
+        if key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    return os.getenv(key)
+
 APOLLO_SEARCH_URL = "https://api.apollo.io/v1/mixed_people/search"
 
 def search_apollo_leads(domains=None, job_titles=None, locations=None, employee_ranges=None, email_status=None, industries=None, limit=10):
     """
     Search Apollo.io for people based on various parameters.
     """
-    if not APOLLO_API_KEY or APOLLO_API_KEY == "your_api_key_here":
-        return {"error": "API Key is missing. Please set APOLLO_API_KEY in your .env file."}
+    api_key = get_secret("APOLLO_API_KEY")
+    if not api_key or api_key == "your_api_key_here":
+        return {"error": "API Key is missing. Please set APOLLO_API_KEY in Streamlit Secrets or your .env file."}
 
     headers = {
         "Content-Type": "application/json",
@@ -24,7 +32,7 @@ def search_apollo_leads(domains=None, job_titles=None, locations=None, employee_
     }
 
     payload = {
-        "api_key": APOLLO_API_KEY,
+        "api_key": api_key,
         "page": 1,
         "per_page": limit,
     }
@@ -84,8 +92,10 @@ def export_to_csv(formatted_leads, output_file="leads_output.csv"):
 
 def export_to_google_sheets(formatted_leads):
     if not formatted_leads: return "No data to export."
-    if not GOOGLE_SHEET_URL or GOOGLE_SHEET_URL == "your_google_sheet_url_here":
-        return "Google Sheet URL missing in .env"
+    
+    sheet_url = get_secret("GOOGLE_SHEET_URL")
+    if not sheet_url or sheet_url == "your_google_sheet_url_here":
+        return "Google Sheet URL missing. Please set GOOGLE_SHEET_URL."
         
     credentials_file = "credentials.json"
     if not os.path.exists(credentials_file):
@@ -93,7 +103,7 @@ def export_to_google_sheets(formatted_leads):
         
     try:
         gc = gspread.service_account(filename=credentials_file)
-        sheet = gc.open_by_url(GOOGLE_SHEET_URL).sheet1
+        sheet = gc.open_by_url(sheet_url).sheet1
         
         headers = ["First Name", "Last Name", "Job Title", "Company Name", "Email", "Email Status"]
         if not sheet.get_all_values():
