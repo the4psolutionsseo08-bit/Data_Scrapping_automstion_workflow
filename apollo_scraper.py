@@ -28,11 +28,11 @@ def search_apollo_leads(domains=None, job_titles=None, locations=None, employee_
 
     headers = {
         "Content-Type": "application/json",
-        "Cache-Control": "no-cache"
+        "Cache-Control": "no-cache",
+        "X-Api-Key": api_key
     }
 
     payload = {
-        "api_key": api_key,
         "page": 1,
         "per_page": limit,
     }
